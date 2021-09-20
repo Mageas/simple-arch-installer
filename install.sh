@@ -46,7 +46,9 @@ function set_disk_partition () {
 function set_partition_tables () {
     echo " >> Setting the partitions tables"
     mkfs.vfat -F32 "${p_disk}1"
-    mkfs.ext4 "${p_disk}2"
+    cryptsetup -y -v luksFormat "${p_disk}2" || exit 1
+    cryptsetup open "${p_disk}2" cryptroot || exit 1
+    mkfs.ext4 /dev/mapper/cryptroot
 }
 
 
@@ -55,7 +57,9 @@ function set_partition_tables () {
 #
 function mount_file_system () {
     echo " >> Mounting the file system"
-    mount "${p_disk}2" /mnt
+    mount /dev/mapper/cryptroot /mnt
+    mkdir -p /mnt/boot
+    mount "${p_disk}1" /mnt/boot
 }
 
 
@@ -142,9 +146,7 @@ function chroot_config_sudo () {
 #
 function config_bootloader () {
     arch_chroot "_chroot_install_bootloader"
-    arch_chroot "_chroot_create_efi_dir"
-    arch_chroot "_chroot_mount_efi_dir" "${p_disk}"
-    arch_chroot "_chroot_grub_config"
+    arch_chroot "_chroot_grub_config" "${p_disk}"
 }
 function chroot_install_bootloader () {
     echo " >> Installing the bootloader"
@@ -152,19 +154,14 @@ function chroot_install_bootloader () {
     pacman -S --needed --noconfirm efibootmgr dosfstools os-prober mtools
     exit 0
 }
-function chroot_create_efi_dir () {
-    echo " >> Creating EFI directory"
-    mkdir /boot/EFI
-    exit 0
-}
-function chroot_mount_efi_dir () {
-    echo " >> Mounting EFI directory"
-    mount "${1}1" /boot/EFI
-    exit 0
-}
 function chroot_grub_config () {
     echo " >> Configuring the grub"
-    grub-install --target=x86_64-efi --bootloader-id=grub_uefi --recheck
+    sed -i -r 's/^(HOOKS=).*/\1\(base udev autodetect keyboard keymap consolefont modconf block encrypt filesystems fsck\)/g' /etc/mkinitcpio.conf
+    mkinitcpio -p linux
+    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck
+    grub-mkconfig -o /boot/grub/grub.cfg
+    local _x=$(blkid | grep ${1}2 | awk '{print $2}' | sed -e 's/\"//g')
+    sed -i -r "s/(GRUB_CMDLINE_LINUX=).*/\1\"cryptdevice=${_x}:cryptroot root=\/dev\/mapper\/cryptroot\"/g" /etc/default/grub
     grub-mkconfig -o /boot/grub/grub.cfg
     exit 0
 }
@@ -222,9 +219,7 @@ function main () {
             '_chroot_add_user_groups') chroot_add_user_groups;;
             '_chroot_config_sudo') chroot_config_sudo;;
             '_chroot_install_bootloader') chroot_install_bootloader;;
-            '_chroot_create_efi_dir') chroot_create_efi_dir;;
-            '_chroot_mount_efi_dir') chroot_mount_efi_dir "${3}";;
-            '_chroot_grub_config') chroot_grub_config;;
+            '_chroot_grub_config') chroot_grub_config "${3}";;
             '_chroot_network_manager') chroot_network_manager;;
         esac
     else
