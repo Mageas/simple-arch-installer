@@ -137,7 +137,6 @@ function chroot_config_doas () {
     echo "permit persist :wheel" >> /etc/doas.conf
     chown -c root:root /etc/doas.conf
     chmod -c 0400 /etc/doas.conf
-    ln -sf /bin/doas /bin/sudo
     exit 0
 }
 
