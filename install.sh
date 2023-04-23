@@ -22,7 +22,7 @@ function set_disk_partition () {
     lsblk -f
     read -p "Select your disk (eg. /dev/sda): " s_disk
     echo ""
-    read -p "Are you sure is it your disk, all the data will be erased ($s_disk)? [Y/n] " disk_confirmation
+    read -p "Are you sure is it your disk, all the data will be erased ($s_disk)? [y/N] " disk_confirmation
     if [ "$disk_confirmation" != "Y" ] && [ "$disk_confirmation" != "y" ]; then
         echo "Exiting script.."
         exit 1
