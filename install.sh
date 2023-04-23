@@ -142,7 +142,7 @@ function chroot_config_doas () {
 }
 function chroot_config_sudo () {
     echo " >> Configuring visudo"
-    pacman -S --needed --noconfirm sudo vim
+    pacman -S --needed --noconfirm sudo
     sed -i 's/^#\s*\(%wheel\s\+ALL=(ALL:ALL)\s\+ALL\)/\1/' /etc/sudoers
     exit 0
 }
