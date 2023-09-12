@@ -57,7 +57,8 @@ function set_partition_tables () {
 function mount_file_system () {
     echo " >> Mounting the file system"
     mount /dev/disk/by-label/archlinux /mnt
-    mount --mkdir /dev/disk/by-label/boot /mnt/boot
+    mkdir -p /mnt/boot
+    mount /dev/disk/by-label/boot /mnt/boot
 }
 
 
