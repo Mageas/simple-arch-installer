@@ -34,9 +34,10 @@ function set_disk_partition () {
         p_disk="${s_disk}"
     fi
 
-    parted ${s_disk} mklabel gpt                  # GPT (sgdisk --list-types)
-    sgdisk ${s_disk} -n=1:0:+550M -t=1:ef00       # UEFI
-    sgdisk ${s_disk} -n=2:0:0 -t=2:8300           # File System
+    parted ${s_disk} -- mklabel gpt
+    parted /dev/sda -- mkpart primary 512MB 100%
+    parted /dev/sda -- mkpart ESP fat32 1MB 512MB
+    parted ${s_disk} -- set 2 esp on
 }
 
 
@@ -45,8 +46,8 @@ function set_disk_partition () {
 #
 function set_partition_tables () {
     echo " >> Setting the partitions tables"
-    mkfs.vfat -F32 "${p_disk}1"
-    mkfs.ext4 "${p_disk}2"
+    mkfs.ext4 -L archlinux "${p_disk}1"
+    mkfs.vfat -F32 -n boot "${p_disk}2"
 }
 
 
@@ -55,9 +56,8 @@ function set_partition_tables () {
 #
 function mount_file_system () {
     echo " >> Mounting the file system"
-    mount "${p_disk}2" /mnt
-    mkdir -p /mnt/boot/efi
-    mount "${p_disk}1" /mnt/boot/efi
+    mount /dev/disk/by-label/archlinux /mnt
+    mount --mkdir /dev/disk/by-label/boot /mnt/boot
 }
 
 
@@ -76,17 +76,16 @@ function install_base_packages () {
 function config_system () {
     echo " >> Configuring system"
     genfstab -U -p /mnt >> /mnt/etc/fstab
-    arch_chroot "_chroot_symlink"
+    arch_chroot "_chroot_locatetime"
     arch_chroot "_chroot_hwclock"
     arch_chroot "_chroot_locale_gen"
     arch_chroot "_chroot_hosts"
     arch_chroot "_chroot_passwd"
     arch_chroot "_chroot_add_user"
     arch_chroot "_chroot_add_user_groups"
-    arch_chroot "_chroot_config_doas"
     arch_chroot "_chroot_config_sudo"
 }
-function chroot_symlink () {
+function chroot_locatetime () {
     echo " >> Creating symlink for the localetime"
     ln -sf /usr/share/zoneinfo/${TIME_ZONE} /etc/localtime
     exit 0
@@ -110,34 +109,26 @@ function chroot_hosts () {
 }
 function chroot_passwd () {
     echo " >> Changing root password"
-	passed=1
-	while [[ ${passed} != 0 ]]; do
-		passwd root
-		passed=$?
-	done
+    passed=1
+    while [[ ${passed} != 0 ]]; do
+        passwd root
+        passed=$?
+    done
     exit 0
 }
 function chroot_add_user () {
     echo " >> Changing $USERNAME password"
-	useradd -m $USERNAME
+    useradd -m $USERNAME
     passed=1
-	while [[ ${passed} != 0 ]]; do
-		passwd $USERNAME
-		passed=$?
-	done
+    while [[ ${passed} != 0 ]]; do
+        passwd $USERNAME
+        passed=$?
+    done
     exit 0
 }
 function chroot_add_user_groups () {
     echo " >> Adding groups to $USERNAME"
     usermod -aG wheel,audio,video,optical,storage $USERNAME
-    exit 0
-}
-function chroot_config_doas () {
-    echo " >> Installing doas"
-    pacman -S --needed --noconfirm opendoas
-    echo "permit persist :wheel" >> /etc/doas.conf
-    chown -c root:root /etc/doas.conf
-    chmod -c 0400 /etc/doas.conf
     exit 0
 }
 function chroot_config_sudo () {
@@ -199,12 +190,12 @@ function the_end () {
 # Arch chroot
 #
 function arch_chroot () {
-	echo " >> arch-chroot /mnt /root"
-	cp ${0} /mnt/root
-	chmod 755 /mnt/root/$(basename "${0}")
-	arch-chroot /mnt /root/$(basename "${0}") --chroot ${1} ${2}
-	rm /mnt/root/$(basename "${0}")
-	echo " >> exit arch-chroot"
+    echo " >> arch-chroot /mnt /root"
+    cp ${0} /mnt/root
+    chmod 755 /mnt/root/$(basename "${0}")
+    arch-chroot /mnt /root/$(basename "${0}") --chroot ${1} ${2}
+    rm /mnt/root/$(basename "${0}")
+    echo " >> exit arch-chroot"
 }
 
 
@@ -214,14 +205,13 @@ function arch_chroot () {
 function main () {
     if [[ $1 == "--chroot" ]]; then
         case ${2} in
-            '_chroot_symlink') chroot_symlink;;
+            '_chroot_locatetime') chroot_locatetime;;
             '_chroot_hwclock') chroot_hwclock;;
             '_chroot_locale_gen') chroot_locale_gen;;
             '_chroot_hosts') chroot_hosts;;
             '_chroot_passwd') chroot_passwd;;
             '_chroot_add_user') chroot_add_user;;
             '_chroot_add_user_groups') chroot_add_user_groups;;
-            '_chroot_config_doas') chroot_config_doas;;
             '_chroot_config_sudo') chroot_config_sudo;;
             '_chroot_install_bootloader') chroot_install_bootloader;;
             '_chroot_grub_config') chroot_grub_config;;
