@@ -35,8 +35,8 @@ function set_disk_partition () {
     fi
 
     parted ${s_disk} -- mklabel gpt
-    parted /dev/sda -- mkpart primary 512MB 100%
-    parted /dev/sda -- mkpart ESP fat32 1MB 512MB
+    parted ${s_disk} -- mkpart primary 512MB 100%
+    parted ${s_disk} -- mkpart ESP fat32 1MB 512MB
     parted ${s_disk} -- set 2 esp on
 }
 
