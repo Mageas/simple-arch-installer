@@ -47,7 +47,7 @@ function set_disk_partition () {
 function set_partition_tables () {
     echo " >> Setting the partitions tables"
     mkfs.ext4 -L archlinux "${p_disk}1"
-    mkfs.vfat -F32 -n boot "${p_disk}2"
+    mkfs.fat -F32 -n boot "${p_disk}2"
 }
 
 
@@ -57,8 +57,7 @@ function set_partition_tables () {
 function mount_file_system () {
     echo " >> Mounting the file system"
     mount /dev/disk/by-label/archlinux /mnt
-    mkdir -p /mnt/boot
-    mount /dev/disk/by-label/boot /mnt/boot
+    mount --mkdir /dev/disk/by-label/boot /mnt/boot
 }
 
 
