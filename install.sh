@@ -34,10 +34,13 @@ function set_disk_partition () {
         p_disk="${s_disk}"
     fi
 
-    parted ${s_disk} -- mklabel gpt
-    parted ${s_disk} -- mkpart ESP fat32 1MB 512MB
-    parted ${s_disk} -- set 1 esp on
-    parted ${s_disk} -- mkpart primary 512MB 100%
+    # parted ${s_disk} -- mklabel gpt
+    # parted ${s_disk} -- mkpart ESP fat32 1MB 512MB
+    # parted ${s_disk} -- set 1 esp on
+    # parted ${s_disk} -- mkpart primary 512MB 100%
+    parted ${s_disk} mklabel gpt                  # GPT (sgdisk --list-types)
+    sgdisk ${s_disk} -n=1:0:+550M -t=1:ef00       # UEFI
+    sgdisk ${s_disk} -n=2:0:0 -t=2:8300           # File System
 }
 
 
