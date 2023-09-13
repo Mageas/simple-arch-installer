@@ -35,9 +35,9 @@ function set_disk_partition () {
     fi
 
     parted ${s_disk} -- mklabel gpt
-    parted ${s_disk} -- mkpart primary 512MB 100%
     parted ${s_disk} -- mkpart ESP fat32 1MB 512MB
-    parted ${s_disk} -- set 2 esp on
+    parted ${s_disk} -- set 1 esp on
+    parted ${s_disk} -- mkpart primary 512MB 100%
 }
 
 
@@ -46,8 +46,8 @@ function set_disk_partition () {
 #
 function set_partition_tables () {
     echo " >> Setting the partitions tables"
-    mkfs.ext4 -L archlinux "${p_disk}1"
-    mkfs.fat -F32 -n boot "${p_disk}2"
+    mkfs.fat -F32 -n boot "${p_disk}1"
+    mkfs.ext4 -L archlinux "${p_disk}2"
 }
 
 
